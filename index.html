@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Karaokê</title>
+<link rel="manifest" href="/manifest.json">
 <style>
     body {
         font-family: 'Roboto', sans-serif;
@@ -78,6 +79,13 @@
         background-color: #dc3545;
     }
 
+    footer {
+        position: relative;
+        bottom: 0px;
+        margin: 20px;
+        text-align: right;
+    }
+
     /* Media query para dispositivos com largura menor que 700px */
     @media (max-width: 700px) {
         .block-container {
@@ -111,6 +119,9 @@
             <button class="btn-clear" onclick="clearList()">Limpar Lista (Senha: APAGUE)</button>
         </div>
     </div>
+    <footer>
+        <pre>karaokê, por @argolo</pre>
+    </footer>
 
     <script>
         function addName() {
@@ -217,6 +228,15 @@
                 searchYouTube();
             }
         });
+    
+        // Obtém o valor da variável "NAME" da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const name = urlParams.get('name');
+
+        // Concatena o valor obtido com o título do h1
+        if (name) {
+            document.querySelector('h1').textContent += ' ' + name.toUpperCase();
+        }
     </script>
 </body>
 </html>
