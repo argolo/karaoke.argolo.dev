@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Karaokê</title>
-<link rel="manifest" href="/manifest.json">
 <style>
     body {
         font-family: 'Roboto', sans-serif;
@@ -26,10 +25,13 @@
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    .title, h1 {
+    .title, h1, h5 {
         font-size: 24px;
         margin-bottom: 20px;
         text-align: center;
+    }
+    h5 {
+        font-size: 70%;
     }
     input[type="text"] {
         width: calc(100% - 80px);
@@ -104,6 +106,7 @@
 </head>
 <body>
     <h1>KARAOKÊ</h1>
+    <h5></h5>
     <div class="container">
         <div id="youtubeSearchContainer" class="block-container">
             <h2 class="title">Pesquise sua música</h2>
@@ -114,7 +117,14 @@
             <ul id="searchHistory"></ul>
             <h2 class="title">Acesse a sala ao vivo</h2>
             <div style="text-align: center;">
-                <img draggable="false" id="qrcode" alt="qrcode" />
+                <img height="300" 
+                     width="300" 
+                     draggable="false" 
+                     id="qrcode" 
+                     loading="lazy"
+                     decoding="async"
+                     style="display: none;" />
+                     <b id="label"></b>
             </div>
         </div>
 
@@ -141,18 +151,36 @@
         const peerParams = new URLSearchParams(window.location.search);
         const peerName = peerParams.get('karaoke');
 
-        let conn; // Variável para armazenar a conexão
+        var conn = undefined; // Variável para armazenar a conexão
+
+        // Remove o bloco de pesquisa do YouTube
+        if (peerName){
+            const youtubeSearchContainer = document.getElementById('youtubeSearchContainer');
+            youtubeSearchContainer.parentNode.removeChild(youtubeSearchContainer);
+            const listContainer = document.getElementById('listContainer');
+            listContainer.style.width='100%';
+
+            displayNames();
+        } else {
+            displayNames();
+            displaySearchHistory();
+        }
     
         // Evento disparado quando a conexão com o servidor PeerJS é estabelecida
         peer.on('open', (id) => {
             console.log('ID do peer:', id);
 
-            
             if (!peerName) {
                 // cria qrcode do peer connection
                 const qrcode = document.getElementById('qrcode');
                 const karaokeUrl = `https://karaoke.argolo.dev?karaoke=${id}`;
                 qrcode.src = `https://chart.apis.google.com/chart?cht=qr&chl=${encodeURIComponent(karaokeUrl)}&chs=300x300`;
+                qrcode.alt = id;
+                qrcode.title = id;
+                qrcode.style = "display: inline"
+                const qrcodeLabel = document.getElementById('label');
+                qrcodeLabel.textContent = id;
+                qrcodeLabel.style = "display: block"
 
                 // Nenhum nome de peer especificado na URL
                 console.log('Aguardando conexão de outros pares...');
@@ -173,12 +201,6 @@
                     });
                 });
             } else {
-                // Remove o bloco de pesquisa do YouTube
-                const youtubeSearchContainer = document.getElementById('youtubeSearchContainer');
-                youtubeSearchContainer.parentNode.removeChild(youtubeSearchContainer);
-                const listContainer = document.getElementById('listContainer');
-                listContainer.style.width='100%';
-
                 // Conectar-se a outro peer com um ID específico
                 conn = peer.connect(peerName);
             
@@ -195,9 +217,9 @@
                     console.log('Dados recebidos:', data);
 
                     // Verifica se os dados são referentes à adição de um nome
-                    if (data.operation === 'addName') {
-                        addNameToList(data.name);
-                    }
+                    // if (data.operation === 'addName') {
+                    //     addNameToList(data.name);
+                    // }
                 });
             }
         });
@@ -255,6 +277,12 @@
                 listItem.appendChild(nameLabel);
                 nameList.appendChild(listItem);
             });
+
+            document.getElementById("nameInput").addEventListener("keyup", function(event) {
+                if (event.key === "Enter") {
+                    addName();
+                }
+            });
         }
 
         function clearList() {
@@ -302,30 +330,24 @@
                 listItem.classList.add("search");
                 searchHistoryList.appendChild(listItem);
             });
+            document.getElementById("youtubeSearchInput").addEventListener("keyup", function(event) {
+                if (event.key === "Enter") {
+                    searchYouTube();
+                }
+            });
         }
-
-        displayNames();
-        displaySearchHistory();
-
-        document.getElementById("nameInput").addEventListener("keyup", function(event) {
-            if (event.key === "Enter") {
-                addName();
-            }
-        });
-
-        document.getElementById("youtubeSearchInput").addEventListener("keyup", function(event) {
-            if (event.key === "Enter") {
-                searchYouTube();
-            }
-        });
     
         // Obtém o valor da variável "NAME" da URL
         const urlParams = new URLSearchParams(window.location.search);
         const name = urlParams.get('name');
+        const karaoke = urlParams.get('karaoke');
+        console.warn(karaoke)
 
         // Concatena o valor obtido com o título do h1
         if (name) {
             document.querySelector('h1').textContent += ' ' + name.toUpperCase();
+        } else if (karaoke) {
+            document.querySelector('h5').textContent += ' (' + karaoke.toUpperCase() + ')';
         }
     </script>
 </body>
