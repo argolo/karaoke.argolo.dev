@@ -78,12 +78,16 @@
         margin-top: 20px;
         background-color: #dc3545;
     }
-
     footer {
         position: relative;
         bottom: 0px;
         margin: 20px;
         text-align: right;
+    }
+    img {
+        padding: 0px;
+        margin: 0px;
+        border: 1px solid black;
     }
 
     /* Media query para dispositivos com largura menor que 700px */
@@ -95,21 +99,26 @@
             flex-wrap: wrap; /* Para garantir que os blocos possam quebrar linha quando necessário */
         }
     }
+
 </style>
 </head>
 <body>
     <h1>KARAOKÊ</h1>
     <div class="container">
-        <div class="block-container">
+        <div id="youtubeSearchContainer" class="block-container">
             <h2 class="title">Pesquise sua música</h2>
             <div style="display: flex;">
                 <input type="text" id="youtubeSearchInput" placeholder="Digite sua pesquisa">
                 <button onclick="searchYouTube()">Pesquisar</button>
             </div>
             <ul id="searchHistory"></ul>
+            <h2 class="title">Acesse a sala ao vivo</h2>
+            <div style="text-align: center;">
+                <img draggable="false" id="qrcode" alt="qrcode" />
+            </div>
         </div>
 
-        <div class="block-container">
+        <div id="listContainer" class="block-container">
             <h2 class="title">Adicione seu nome</h2>
             <div style="display: flex;">
                 <input type="text" id="nameInput" placeholder="Digite um nome">
@@ -123,17 +132,98 @@
         <pre>karaokê, por @argolo</pre>
     </footer>
 
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
+        // Cria uma nova instância do Peer
+        const peer = new Peer();
+    
+        // Obtém o valor da variável "karaoke" da URL
+        const peerParams = new URLSearchParams(window.location.search);
+        const peerName = peerParams.get('karaoke');
+
+        let conn; // Variável para armazenar a conexão
+    
+        // Evento disparado quando a conexão com o servidor PeerJS é estabelecida
+        peer.on('open', (id) => {
+            console.log('ID do peer:', id);
+
+            
+            if (!peerName) {
+                // cria qrcode do peer connection
+                const qrcode = document.getElementById('qrcode');
+                const karaokeUrl = `https://karaoke.argolo.dev?karaoke=${id}`;
+                qrcode.src = `https://chart.apis.google.com/chart?cht=qr&chl=${encodeURIComponent(karaokeUrl)}&chs=300x300`;
+
+                // Nenhum nome de peer especificado na URL
+                console.log('Aguardando conexão de outros pares...');
+
+                // Evento disparado quando outra pessoa se conecta a este peer
+                peer.on('connection', (newConn) => {
+                    conn = newConn; // Atualiza a conexão
+                    console.log('Conexão estabelecida com outro par.');
+                    
+                    // Evento disparado quando dados são recebidos deste peer
+                    conn.on('data', (data) => {
+                        console.log('Dados recebidos:', data);
+
+                        // Verifica se os dados são referentes à adição de um nome
+                        if (data.operation === 'addName') {
+                            addNameToList(data.name);
+                        }
+                    });
+                });
+            } else {
+                // Remove o bloco de pesquisa do YouTube
+                const youtubeSearchContainer = document.getElementById('youtubeSearchContainer');
+                youtubeSearchContainer.parentNode.removeChild(youtubeSearchContainer);
+                const listContainer = document.getElementById('listContainer');
+                listContainer.style.width='100%';
+
+                // Conectar-se a outro peer com um ID específico
+                conn = peer.connect(peerName);
+            
+                // Evento disparado quando a conexão é aberta
+                conn.on('open', () => {
+                    console.log('Conexão estabelecida com outro par.');
+
+                    // Envia uma mensagem inicial para o outro par (opcional)
+                    conn.send('Olá, peer!');
+                });
+            
+                // Evento disparado quando dados são recebidos do outro peer
+                conn.on('data', (data) => {
+                    console.log('Dados recebidos:', data);
+
+                    // Verifica se os dados são referentes à adição de um nome
+                    if (data.operation === 'addName') {
+                        addNameToList(data.name);
+                    }
+                });
+            }
+        });
+
         function addName() {
             var nameInput = document.getElementById("nameInput");
             var name = nameInput.value.trim();
             if (name !== "") {
-                var names = JSON.parse(localStorage.getItem("names")) || [];
-                names.push({ name: name, checked: false });
-                localStorage.setItem("names", JSON.stringify(names));
-                nameInput.value = "";
-                displayNames();
+                // Adiciona o nome à lista localmente
+                addNameToList(name);
+                
+                // Envia o nome para outros pares conectados
+                if (conn) {
+                    conn.send({ operation: 'addName', name: name });
+                }
+
+                nameInput.value = ""; // Limpa o campo de entrada
             }
+        }
+
+        // Função para adicionar um nome à lista de nomes
+        function addNameToList(name) {
+            var names = JSON.parse(localStorage.getItem("names")) || [];
+            names.push({ name: name, checked: false });
+            localStorage.setItem("names", JSON.stringify(names));
+            displayNames();
         }
 
         function displayNames() {
@@ -191,7 +281,7 @@
         function saveSearchHistory(searchTerm) {
             var searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
             searchHistory.unshift(searchTerm);
-            if (searchHistory.length > 10) {
+            if (searchHistory.length > 5) {
                 searchHistory.pop(); // Limita o histórico de pesquisa a 5 itens
             }
             localStorage.setItem("searchHistory", JSON.stringify(searchHistory));
