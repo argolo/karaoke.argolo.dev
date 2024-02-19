@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karaokê</title>
+<style>
+    body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0px;
+        padding-left: 5%;
+        padding-right: 5%;
+        padding-top: 2%;
+        background-color: #f0f0f0;
+    }
+    .container {
+        display: flex;
+        margin: 0 auto;
+    }
+    .block-container {
+        width: 50%;
+        margin: 20px;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .title, h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    input[type="text"] {
+        width: calc(100% - 80px);
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+    input[type="text"]:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+    button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    button:focus {
+        outline: none;
+    }
+    ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    li {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    li:last-child {
+        border-bottom: none;
+    }
+    .name, .search {
+        flex-grow: 1;
+        margin-left: 10px;
+    }
+    .name.checked {
+        text-decoration: line-through;
+        color: #888;
+    }
+    .btn-clear {
+        margin-top: 20px;
+        background-color: #dc3545;
+    }
+
+    /* Media query para dispositivos com largura menor que 700px */
+    @media (max-width: 700px) {
+        .block-container {
+            width: 100%;
+        }
+        .container {
+            flex-wrap: wrap; /* Para garantir que os blocos possam quebrar linha quando necessário */
+        }
+    }
+</style>
+</head>
+<body>
+    <h1>KARAOKÊ</h1>
+    <div class="container">
+        <div class="block-container">
+            <h2 class="title">Pesquise sua música</h2>
+            <div style="display: flex;">
+                <input type="text" id="youtubeSearchInput" placeholder="Digite sua pesquisa">
+                <button onclick="searchYouTube()">Pesquisar</button>
+            </div>
+            <ul id="searchHistory"></ul>
+        </div>
+
+        <div class="block-container">
+            <h2 class="title">Adicione seu nome</h2>
+            <div style="display: flex;">
+                <input type="text" id="nameInput" placeholder="Digite um nome">
+                <button onclick="addName()">Adicionar</button>
+            </div>
+            <ul id="nameList"></ul>
+            <button class="btn-clear" onclick="clearList()">Limpar Lista (Senha: APAGUE)</button>
+        </div>
+    </div>
+
+    <script>
+        function addName() {
+            var nameInput = document.getElementById("nameInput");
+            var name = nameInput.value.trim();
+            if (name !== "") {
+                var names = JSON.parse(localStorage.getItem("names")) || [];
+                names.push({ name: name, checked: false });
+                localStorage.setItem("names", JSON.stringify(names));
+                nameInput.value = "";
+                displayNames();
+            }
+        }
+
+        function displayNames() {
+            var nameList = document.getElementById("nameList");
+            nameList.innerHTML = "";
+            var names = JSON.parse(localStorage.getItem("names")) || [];
+            names.forEach(function(item, index) {
+                var listItem = document.createElement("li");
+                listItem.classList.add("name-item");
+                var checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = item.checked;
+                checkbox.addEventListener("change", function() {
+                    names[index].checked = checkbox.checked;
+                    localStorage.setItem("names", JSON.stringify(names));
+                    if (checkbox.checked) {
+                        nameLabel.classList.add("checked");
+                    } else {
+                        nameLabel.classList.remove("checked");
+                    }
+                });
+                var nameLabel = document.createElement("span");
+                nameLabel.textContent = item.name;
+                nameLabel.classList.add("name");
+                if (item.checked) {
+                    nameLabel.classList.add("checked");
+                }
+                listItem.appendChild(checkbox);
+                listItem.appendChild(nameLabel);
+                nameList.appendChild(listItem);
+            });
+        }
+
+        function clearList() {
+            var password = prompt("Por favor, insira a senha para limpar a lista:");
+            if (password === "APAGUE") {
+                localStorage.removeItem("names");
+                displayNames();
+            } else {
+                alert("Senha incorreta! A lista não foi limpa.");
+            }
+        }
+
+        function searchYouTube() {
+            var searchInput = document.getElementById("youtubeSearchInput").value.trim();
+            if (searchInput !== "") {
+                var searchTerm = encodeURIComponent("karaoke " + searchInput);
+                var youtubeURL = "https://www.youtube.com/results?search_query=" + searchTerm;
+                window.open(youtubeURL, "_blank");
+                saveSearchHistory(searchInput);
+                document.getElementById("youtubeSearchInput").value = ""; // Limpa a caixa de busca
+            }
+        }
+
+        function saveSearchHistory(searchTerm) {
+            var searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
+            searchHistory.unshift(searchTerm);
+            if (searchHistory.length > 10) {
+                searchHistory.pop(); // Limita o histórico de pesquisa a 5 itens
+            }
+            localStorage.setItem("searchHistory", JSON.stringify(searchHistory));
+            displaySearchHistory();
+        }
+
+        function displaySearchHistory() {
+            var searchHistoryList = document.getElementById("searchHistory");
+            searchHistoryList.innerHTML = "";
+            var searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
+            searchHistory.forEach(function(item) {
+                var listItem = document.createElement("li");
+                var searchLink = document.createElement("a");
+                searchLink.textContent = item;
+                searchLink.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent("karaoke " + item);
+                searchLink.target = "_blank";
+                listItem.appendChild(searchLink);
+                listItem.classList.add("search");
+                searchHistoryList.appendChild(listItem);
+            });
+        }
+
+        displayNames();
+        displaySearchHistory();
+
+        document.getElementById("nameInput").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                addName();
+            }
+        });
+
+        document.getElementById("youtubeSearchInput").addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                searchYouTube();
+            }
+        });
+    </script>
+</body>
+</html>
