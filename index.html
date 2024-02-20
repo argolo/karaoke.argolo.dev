@@ -216,7 +216,7 @@
                 conn.on('data', (data) => {
                     console.log('Dados recebidos:', data);
 
-                    Verifica se os dados são referentes à adição de um nome
+                    // Verifica se os dados são referentes à adição de um nome
                     if (data.operation === 'addName') {
                         addNameToList(data.name);
                     }
